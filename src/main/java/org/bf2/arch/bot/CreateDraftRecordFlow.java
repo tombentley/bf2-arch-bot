@@ -16,6 +16,7 @@ import io.quarkiverse.githubapp.event.IssueComment;
 import org.bf2.arch.bot.model.record.RecordPage;
 import org.bf2.arch.bot.model.record.RecordId;
 import org.bf2.arch.bot.model.record.RecordType;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.kohsuke.github.GHBranch;
@@ -61,6 +62,12 @@ public class CreateDraftRecordFlow {
 
     private static final Logger LOG = LoggerFactory.getLogger(CreateDraftRecordFlow.class);
 
+    public static final String ENABLE = "bot.enable.create-draft";
+
+    @ConfigProperty(name = ENABLE, defaultValue = "false")
+    boolean enabled;
+
+
     /**
      * Creates a PR for a Draft ADR when an issue comment has {@code /create-adr} (or ap, or padr),
      * or {@code /supersede adr 123}.
@@ -73,9 +80,14 @@ public class CreateDraftRecordFlow {
             @IssueComment.Edited
             GHEventPayload.IssueComment commentPayload,
             @ConfigFile("bf2-arch-bot.yml") ArchBotConfig config) throws IOException {
+        if (!enabled) {
+            LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
+            return;
+        }
         if (config == null) {
             throw new IllegalStateException("Repo is missing config file");
         }
+        LOG.debug("Config: {}", config);
         boolean authorized = isAuthorized(commentPayload, config);
         String body = commentPayload.getComment().getBody().trim();
         Matcher createMatcher = CMD_CREATE.matcher(body);
@@ -100,7 +112,12 @@ public class CreateDraftRecordFlow {
     }
 
     private boolean isAuthorized(GHEventPayload.IssueComment commentPayload, ArchBotConfig config) throws IOException {
-        return config.recordCreationApprovers.contains(commentPayload.getComment().getUser().getLogin());
+        String userLogin = commentPayload.getComment().getUser().getLogin();
+        LOG.debug("Issue #{}, isAuthorized: recordCreationApprovers={}, user={}",
+                commentPayload.getIssue().getNumber(),
+                config.recordCreationApprovers,
+                userLogin);
+        return config.recordCreationApprovers.contains(userLogin);
     }
 
     private void createDraft(ArchBotConfig config, GHEventPayload.IssueComment commentPayload,

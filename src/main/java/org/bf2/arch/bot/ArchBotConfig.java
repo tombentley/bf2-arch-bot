@@ -1,6 +1,10 @@
 package org.bf2.arch.bot;
 
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
  * Config file for the bot.
@@ -14,18 +18,28 @@ public class ArchBotConfig {
     String botUserLogin;
 
     /**
-     * The time, in hours, to wait between checking for stalled discussions.
+     * The time, in minutes, to wait between checking for stalled discussions.
      */
     long stalledDiscussionPollTimeMins;
 
     /**
      * Github logins of people who can do "/create adr" etc. on issues.
      */
-    List<String> recordCreationApprovers;
+    @JsonDeserialize(as = TreeSet.class)
+    Set<String> recordCreationApprovers = new TreeSet<>();
 
     /**
      * The URL at which the site is published.
      */
     String publishedUrl = "https://architecture.appservices.tech";
 
+    @Override
+    public String toString() {
+        return "ArchBotConfig(" +
+                "botUserLogin='" + botUserLogin + '\'' +
+                ", stalledDiscussionPollTimeMins=" + stalledDiscussionPollTimeMins +
+                ", recordCreationApprovers=" + recordCreationApprovers +
+                ", publishedUrl='" + publishedUrl + '\'' +
+                ')';
+    }
 }

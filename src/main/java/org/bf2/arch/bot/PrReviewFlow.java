@@ -19,6 +19,7 @@ import org.bf2.arch.bot.model.record.RecordId;
 import org.bf2.arch.bot.model.record.RecordType;
 import org.bf2.arch.bot.model.patch.FilePatch;
 import org.bf2.arch.bot.model.patch.Line;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.kohsuke.github.GHCommitPointer;
 import org.kohsuke.github.GHDirection;
 import org.kohsuke.github.GHEventPayload;
@@ -44,6 +45,9 @@ import org.slf4j.LoggerFactory;
  */
 public class PrReviewFlow {
 
+    public static final String ENABLE = "bot.enable.pr-review";
+    @ConfigProperty(name = ENABLE, defaultValue = "false")
+    boolean enabled;
 
     /**
      * When a PR that touches an ADR is marked ready for review:
@@ -109,7 +113,8 @@ public class PrReviewFlow {
 
     public void onPullRequestOpened(@PullRequest.Opened
                                     GHEventPayload.PullRequest pullRequest) throws IOException {
-        if (true) {
+        if (!enabled) {
+            LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
             return;
         }
         if (!pullRequest.getPullRequest().isDraft()) {
@@ -122,7 +127,8 @@ public class PrReviewFlow {
 
     public void onPullRequestEdited(@PullRequest.Edited
                                     GHEventPayload.PullRequest pullRequest) throws IOException {
-        if (true) {
+        if (!enabled) {
+            LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
             return;
         }
         if (!pullRequest.getPullRequest().isDraft()) {
@@ -135,7 +141,8 @@ public class PrReviewFlow {
 
     public void onPullRequestReadyForReview(@PullRequest.ReadyForReview
                                      GHEventPayload.PullRequest pullRequest) throws IOException {
-        if (true) {
+        if (!enabled) {
+            LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
             return;
         }
         LOG.debug("PR #{} ReadyForReview", pullRequest.getNumber());
@@ -144,7 +151,8 @@ public class PrReviewFlow {
 
     public void onPullRequestComment(@IssueComment.Created
                                      GHEventPayload.IssueComment comment) throws IOException, URISyntaxException {
-        if (true) {
+        if (!enabled) {
+            LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
             return;
         }
         GHIssue issue = comment.getIssue();
@@ -153,9 +161,6 @@ public class PrReviewFlow {
             files(pullRequest);
         }
     }
-
-
-
 
     private List<RecordId> modifiedRecords(GHPullRequest pullRequest) {
         var result = new ArrayList<RecordId>();

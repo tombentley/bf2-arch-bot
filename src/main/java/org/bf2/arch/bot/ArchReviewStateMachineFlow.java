@@ -33,6 +33,7 @@ import io.quarkiverse.githubapp.event.IssueComment;
 import io.quarkiverse.githubapp.event.PullRequest;
 import org.bf2.arch.bot.model.record.RecordId;
 import org.bf2.arch.bot.model.record.RecordType;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.kohsuke.github.GHEventPayload;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHPerson;
@@ -42,6 +43,10 @@ import org.slf4j.LoggerFactory;
 
 public class ArchReviewStateMachineFlow {
     private static final Logger LOG = LoggerFactory.getLogger(ArchReviewStateMachineFlow.class);
+
+    private static final String ENABLE = "bot.enable.state-machine";
+    @ConfigProperty(name = ENABLE, defaultValue = "false")
+    boolean enabled;
 
     /**
      * <pre>
@@ -66,6 +71,10 @@ public class ArchReviewStateMachineFlow {
             @PullRequest.Edited
             GHEventPayload.PullRequest pullRequestPayload,
             @ConfigFile("bf2-arch-bot.yml") ArchBotConfig config) throws IOException {
+        if (!enabled) {
+            LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
+            return;
+        }
         GHPullRequest pullRequest = pullRequestPayload.getPullRequest();
         if (!pullRequest.isDraft()
                 && !Util.isThisBot(config, pullRequestPayload.getSender())) {
@@ -114,11 +123,6 @@ public class ArchReviewStateMachineFlow {
         }
     }
 
-
-
-
-
-
     /**
      * Returns true if the PR touches any record (ADR, AP, PADR)
      * @param pullRequest The pull request
@@ -158,6 +162,10 @@ public class ArchReviewStateMachineFlow {
     public void readyForMerge(@IssueComment.Created
                               GHEventPayload.IssueComment issueComment,
                               @ConfigFile("bf2-arch-bot.yml") ArchBotConfig config) throws IOException, URISyntaxException {
+        if (!enabled) {
+            LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
+            return;
+        }
         if (!issueComment.getIssue().isPullRequest()) {
             LOG.debug("Ignoring non-PR issue #{}", issueComment.getIssue().getNumber());
             return;

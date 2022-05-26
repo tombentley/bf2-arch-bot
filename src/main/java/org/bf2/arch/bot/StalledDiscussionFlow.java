@@ -38,16 +38,32 @@ import org.slf4j.LoggerFactory;
 public class StalledDiscussionFlow {
 
     private static final Logger LOG = LoggerFactory.getLogger(StalledDiscussionFlow.class);
+    public static final String ENABLE = "bot.enable.stalled-discussion";
+
+    @ConfigProperty(name = "bot.installation.id")
+    Long installationId;
+
+    @ConfigProperty(name = ENABLE, defaultValue = "false")
+    boolean enabled;
+
     private Date lastRan = new Date(0);
 
     GitHub client;
     //ArchBotConfig config;
 
     @Inject
-    void init(GitHubService service,
-              @ConfigProperty("") Long installationId) {
-         client = service.getInstallationClient(installationId);
-         // TODO load the config
+    void init(GitHubService service) {
+        if (!enabled) {
+            LOG.debug("Ignoring init: disabled due to {}=false", ENABLE);
+        } else {
+            if (installationId != null) {
+                // TODO parameterise this installactionId
+                client = service.getInstallationClient(installationId);
+                // TODO load the config
+            } else {
+                throw new RuntimeException("installaction id is requied");
+            }
+        }
     }
 
 
@@ -71,6 +87,10 @@ public class StalledDiscussionFlow {
     // TODO similar method as this, but for OVERDUE
     @Scheduled(every="60s")
     public void checkForStalledDiscussions() throws IOException {
+        if (!enabled) {
+            LOG.debug("Ignoring scheduled trigger: disabled due to {}=false", ENABLE);
+            return;
+        }
         long now = System.currentTimeMillis();
         long thresh = now - 24*40*60*1000L;
         LOG.info("Checking for stalled discussions");
