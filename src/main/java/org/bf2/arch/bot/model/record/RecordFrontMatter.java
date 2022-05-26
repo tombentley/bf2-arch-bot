@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bf2.arch.bot.model;
+package org.bf2.arch.bot.model.record;
 
 import java.util.List;
 import java.util.Map;
@@ -24,17 +24,22 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-//        num: 0 # allocate an id when the draft is created
-//        title: ADR template
-//        status: "Draft" # One of Draft, Accepted, Rejected
-//        authors:
-//        - "" # One item for each author, as github id or "firstname lastname"
-//        tags:
-//        - "" # e.g. kafka, connectors, registry
-//        applies_padrs: # What PADRs does this ADR apply?
-//        applies_patterns: # What APs does this ADR apply?
-//        ---
-public class FrontMatter {
+/**
+ * Represents the frontmatter of records
+ */
+public class RecordFrontMatter {
+
+    //        num: 0 # allocate an id when the draft is created
+    //        title: ADR template
+    //        status: "Draft" # One of Draft, Accepted, Rejected
+    //        authors:
+    //        - "" # One item for each author, as github id or "firstname lastname"
+    //        tags:
+    //        - "" # e.g. kafka, connectors, registry
+    //        applies_padrs: # What PADRs does this ADR apply?
+    //        applies_patterns: # What APs does this ADR apply?
+    //        ---
+
     @JsonProperty
     public int num;
     @JsonProperty

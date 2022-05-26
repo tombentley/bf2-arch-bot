@@ -3,21 +3,30 @@ package org.bf2.arch.bot;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import io.quarkiverse.githubapp.event.IssueComment;
 import io.quarkiverse.githubapp.event.PullRequest;
-import org.bf2.arch.bot.model.RecordId;
-import org.bf2.arch.bot.model.RecordType;
+import org.bf2.arch.bot.model.record.RecordId;
+import org.bf2.arch.bot.model.record.RecordType;
+import org.bf2.arch.bot.model.patch.FilePatch;
+import org.bf2.arch.bot.model.patch.Line;
 import org.kohsuke.github.GHCommitPointer;
+import org.kohsuke.github.GHDirection;
 import org.kohsuke.github.GHEventPayload;
 import org.kohsuke.github.GHIssue;
+import org.kohsuke.github.GHIssueState;
+import org.kohsuke.github.GHPerson;
 import org.kohsuke.github.GHPullRequest;
+import org.kohsuke.github.GHPullRequestQueryBuilder;
 import org.kohsuke.github.GHPullRequestReviewBuilder;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
@@ -33,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * Any banned terms (Actors/Personas)
  * ?Sentence per line?
  */
-public class ReviewDraftPr {
+public class PrReviewFlow {
 
 
     /**
@@ -41,23 +50,68 @@ public class ReviewDraftPr {
      * 1. Bot adds "needs-reviewers" label
      * 2. Bot does its own code review.
      *
-     * Reviewers get added manually in an arch meeting by triaging PRs with the "needs-reviewers" label
-     *
-     * When bot observes the addition of reviewers
-     * 1. Bot removes the "needs-reviewers" label, adds the "being-reviewed" label.
+     * Reviewers get added manually in an arch meeting by triaging PRs with the "needs-reviewers" label.
+     * The "needs-reviewers" label is removed manually.
+     * 1. Bot adds the "being-reviewed" label when there are reviewers assigned and the "needs-reviewers" label removed
      *
      * Seven days after reviewer comments have stalled, or when all reviewers have left a review:
      * Reviewers have 7 days to add their review and leave a `/accept`, `/reject` or `/defer` comment.
      *    GH approve <=> /accept,
-     *    GH needs changes <=> refer
+     *    GH needs changes <=> defer
      * 1. Bot summarizes the results of the review. Adds the "ready-for-merge" label.
      *
      * PR gets merged in an arch meeting by triaging PRs with the "ready-for-merge" label.
      */
-    private static final Logger LOG = LoggerFactory.getLogger(ReviewDraftPr.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PrReviewFlow.class);
+
+    public void onTimer(GitHub client) throws IOException, URISyntaxException {
+        client.getOrganization("")
+                .getRepository("")
+                .queryPullRequests()
+                .state(GHIssueState.OPEN)
+                .sort(GHPullRequestQueryBuilder.Sort.UPDATED)
+                .direction(GHDirection.ASC)
+                .base("")
+                .head("")
+                .list();
+
+        for (var issue : client.searchIssues()
+                .q("is:pr is:open updated:YYYY-MM-DD")
+                .list()) {
+            var pr = Util.findPullRequest(issue);
+            if (pr == null) {
+                throw new IllegalStateException("Queried for PRs but found a non-PR issue " + issue.getNumber());
+            }
+            //issue.getAssignees()
+            var requestedReviewers = pr.getRequestedReviewers().stream()
+                    .map(GHPerson::getLogin)
+                    .collect(Collectors.toSet());
+            Set<String> changes = new HashSet<>(requestedReviewers.size());
+            Set<String> approvers = new HashSet<>(requestedReviewers.size());
+            for (var review : pr.listReviews()) {
+                String reviewerLogin = review.getUser().getLogin();
+                requestedReviewers.remove(reviewerLogin);
+                switch (review.getState()) {
+                    case CHANGES_REQUESTED:
+                    case REQUEST_CHANGES:
+                        changes.add(reviewerLogin);
+                        break;
+                    case APPROVED:
+                        approvers.add(reviewerLogin);
+                        break;
+                    // TODO
+                }
+            }
+            pr.comment("Comments on this issue seem to have quietened down");
+            pr.addLabels("ready-for-merge");
+        }
+    }
 
     public void onPullRequestOpened(@PullRequest.Opened
-                                     GHEventPayload.PullRequest pullRequest) throws IOException {
+                                    GHEventPayload.PullRequest pullRequest) throws IOException {
+        if (true) {
+            return;
+        }
         if (!pullRequest.getPullRequest().isDraft()) {
             LOG.debug("ReadyForReview PR #{} opened", pullRequest.getNumber());
             files(pullRequest.getPullRequest());
@@ -68,6 +122,9 @@ public class ReviewDraftPr {
 
     public void onPullRequestEdited(@PullRequest.Edited
                                     GHEventPayload.PullRequest pullRequest) throws IOException {
+        if (true) {
+            return;
+        }
         if (!pullRequest.getPullRequest().isDraft()) {
             LOG.debug("ReadyForReview PR #{} edited", pullRequest.getNumber());
             files(pullRequest.getPullRequest());
@@ -78,50 +135,67 @@ public class ReviewDraftPr {
 
     public void onPullRequestReadyForReview(@PullRequest.ReadyForReview
                                      GHEventPayload.PullRequest pullRequest) throws IOException {
+        if (true) {
+            return;
+        }
         LOG.debug("PR #{} ReadyForReview", pullRequest.getNumber());
         files(pullRequest.getPullRequest());
     }
 
     public void onPullRequestComment(@IssueComment.Created
                                      GHEventPayload.IssueComment comment) throws IOException, URISyntaxException {
-        if (comment.getIssue().isPullRequest()) {
-            GHIssue.PullRequest pullRequest1 = comment.getIssue().getPullRequest();
-            GHRepository repository = comment.getIssue().getRepository();
-            int num = -1;
-            String[] split = pullRequest1.getUrl().toURI().getPath().split("/");
-            for (int ii = split.length - 1; ii >= 0; ii--) {
-                try {
-                    num = Integer.parseInt(split[ii]);
-                    break;
-                } catch (NumberFormatException e) {
-                    // carry on
-                }
-            }
-            GHPullRequest pullRequest = repository.getPullRequest(num);
+        if (true) {
+            return;
+        }
+        GHIssue issue = comment.getIssue();
+        GHPullRequest pullRequest = Util.findPullRequest(issue);
+        if (pullRequest != null) {
             files(pullRequest);
         }
+    }
+
+
+
+
+    private List<RecordId> modifiedRecords(GHPullRequest pullRequest) {
+        var result = new ArrayList<RecordId>();
+        var prNumber = pullRequest.getNumber();
+        for (var fileDetail : pullRequest.listFiles()) {
+            String repoPath = fileDetail.getFilename();
+            LOG.debug("PR #{} modifies file {}", prNumber, repoPath);
+            for (var rt : RecordType.values()) {
+                RecordId recordId = rt.recordOf(repoPath);
+                if (recordId != null) {
+                    result.add(recordId);
+                }
+            }
+        }
+        return result;
     }
 
     private void files(GHPullRequest pullRequest) throws IOException {
         var prNumber = pullRequest.getNumber();
         for (var fileDetail : pullRequest.listFiles()) {
             String repoPath = fileDetail.getFilename();
-            LOG.debug("PR #{} modifies file {}",
-                    prNumber, repoPath);
+            LOG.debug("PR #{} modifies file {}", prNumber, repoPath);
             for (var rt : RecordType.values()) {
                 RecordId recordId = rt.recordOf(repoPath);
                 if (recordId != null) {
+                    // TODO replace with ArchReviewStateMachineFlow.touchesRecord
 
                     // Do we consume the diff directly
                     // Or should we apply the diff, build a pre- and post- PR version of the Page
                     // and particularly the FrontMatter and see how the FrontMatter change?
                     GHRepository ourRepo = pullRequest.getBase().getRepository();
                     String defaultBranch = ourRepo.getDefaultBranch();
-                    var basePage = CreateDraftRecord.getPage(ourRepo, ourRepo.getBranch(defaultBranch), repoPath);
+                    var basePage = CreateDraftFlow.getPage(ourRepo, ourRepo.getBranch(defaultBranch), repoPath);
 
                     GHCommitPointer head = pullRequest.getHead();
                     var theirRepo = head.getRepository();
-                    var headPage = CreateDraftRecord.getPage(ourRepo, theirRepo.getBranch(head.getRef()), repoPath);
+                    var headPage = CreateDraftFlow.getPage(ourRepo, theirRepo.getBranch(head.getRef()), repoPath);
+
+                    GHPullRequestReviewBuilder review = pullRequest.createReview();
+                    FilePatch filePatch = FilePatch.parsePatch(fileDetail.getPatch());
 
                     if (basePage.frontMatter.status.equals(headPage.frontMatter.status)) {
                         LOG.debug("PR #{} does not change the status: {}", prNumber,
@@ -129,37 +203,38 @@ public class ReviewDraftPr {
                     } else {
                         LOG.debug("PR #{} changes the status {} -> {}", prNumber,
                                 basePage.frontMatter.status, headPage.frontMatter.status);
+                        Optional<FilePatch.LineMatch> first = filePatch.linesMatching(
+                                EnumSet.of(Line.Type.ADD),
+                                Pattern.compile("^status:.*$")).findFirst();
+                        int statusLineNumber = first.map(FilePatch.LineMatch::patchLineNum).orElse(1);
+
+                        // Validate the status
+                        List<String> statuses = List.of("Draft", "Accepted", "Superseded", "Rejected", "Deferred");
+                        if (!statuses.contains(headPage.frontMatter.status)) {
+                            review.comment("Status must be one of " + statuses, fileDetail.getFilename(), statusLineNumber);
+                        }
+
+                        // Validate the status transition (e.g. Draft -> Superseded, or Accepted -> Rejected)
+                        switch (headPage.frontMatter.status) {
+                            case "Deferred":
+                            case "Accepted":
+                            case "Rejected":
+                                if (!"Draft".equals(basePage.frontMatter.status)) {
+                                    review.comment("Suspect state transition", fileDetail.getFilename(), statusLineNumber);
+                                }
+                                break;
+                            case "Superseded":
+                                if (!"Accepted".equals(basePage.frontMatter.status)) {
+                                    review.comment("Suspect state transition", fileDetail.getFilename(), statusLineNumber);
+                                }
+                                break;
+                        }
                     }
 
-                    GHPullRequestReviewBuilder review = pullRequest.createReview();
-
-                    // Validate the status
-                    int statusLineNumber = 1; // TODO
-                    List<String> statuses = List.of("Draft", "Accepted", "Superseded", "Rejected", "Deferred");
-                    if (!statuses.contains(headPage.frontMatter.status)) {
-                        review.comment("Status must be one of " + statuses, fileDetail.getFilename(), statusLineNumber);
-                    }
-
-                    // Validate the status transition (e.g. Draft -> Superseded, or Accepted -> Rejected)
-                    switch (headPage.frontMatter.status) {
-                        case "Deferred":
-                        case "Accepted":
-                        case "Rejected":
-                            if (!"Draft".equals(basePage.frontMatter.status)) {
-                                review.comment("Suspect state transition", fileDetail.getFilename(), statusLineNumber);
-                            }
-                            break;
-                        case "Superseded":
-                            if (!"Accepted".equals(basePage.frontMatter.status)) {
-                                review.comment("Suspect state transition", fileDetail.getFilename(), statusLineNumber);
-                            }
-                            break;
-                    }
-
-                    // Validate that there's a git hub label for each tag
-                    // Check for undefined abbrevs, and add comment
-                    // Check for suspect terminology
-                    // Check about sentence per line?
+                    // TODO Validate that there's a github label for each tag
+                    // TODO Check for undefined abbrevs, and add comment
+                    // TODO Check for suspect terminology
+                    // TODO Check about sentence per line?
 
 
 
@@ -169,6 +244,7 @@ public class ReviewDraftPr {
     }
 
 
+    /** Heuristic code to identify undefined acronyms/initialisms */
     public static void main(String[] args) {
 
         // TODO, but need to handle line numbers, or search again after the fact for the first occurrance
@@ -176,10 +252,26 @@ public class ReviewDraftPr {
         Pattern acronymPattern = Pattern.compile("[A-Z0-9]{2,}");
         Set<String> definedAcronyms = new HashSet<>(Set.of("OK"));
 
+        // Assume explained abbreviations look like either:
+        // a) Three Letter Abbreviation (TLA)
+        // b) TLA (Three letter abbreviation)
+        // Further assume that parentheses are always balanced
+        // Then we're looking for acronyms which are not directly enclosed in parens (a)
+        // And are not followed by an open bracket (b)
+
+        //
+
         String text = "WOOT. This is some text with a Three Letter Abbreviation (TLA).\n" +
                 "And some more stuff. It's OK to mention TLA again here.\n" +
                 "But later on I might use 3LA (3 letter abbreviation), which is also fine.\n" +
                 "So long as I don't use FLA and not define it. WDYT?";
+
+//        var p = Pattern.compile("(?<![(A-Z0-9])([A-Z0-9]{2,})(?!\\s*\\()");
+//        var m = p.matcher(text);
+//        while (m.find()) {
+//            System.out.println(m.group(1));
+//        }
+
         String[] words = text.split("\\W+");
         for (int i = 0; i < words.length; i++) {
             String word = words[i];

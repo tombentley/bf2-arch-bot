@@ -1,26 +1,31 @@
 package org.bf2.arch.bot;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 
+/**
+ * Config file for the bot.
+ * Lives in {@code .github/bf2-arch-bot.yml}.
+ */
 public class ArchBotConfig {
 
-    public static class TeamRef {
-        final String org; //bf2
-        final String team; //architects
+    /**
+     * Github login name of the bot itself.
+     */
+    String botUserLogin;
 
-        public TeamRef(@JsonProperty("org") String org,
-                       @JsonProperty("team") String team) {
-            this.org = org;
-            this.team = team;
-        }
-    }
+    /**
+     * The time, in hours, to wait between checking for stalled discussions.
+     */
+    long stalledDiscussionPollTimeMins;
 
-    final TeamRef adrCreationApprovers;
+    /**
+     * Github logins of people who can do "/create adr" etc. on issues.
+     */
+    List<String> recordCreationApprovers;
 
-    @JsonCreator
-    public ArchBotConfig(
-            @JsonProperty("adrCreationApprovers") TeamRef adrCreationApprovers) {
-        this.adrCreationApprovers = adrCreationApprovers;
-    }
+    /**
+     * The URL at which the site is published.
+     */
+    String publishedUrl = "https://architecture.appservices.tech";
+
 }

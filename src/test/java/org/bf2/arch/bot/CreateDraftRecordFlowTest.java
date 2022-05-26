@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import org.bf2.arch.bot.model.Page;
-import org.bf2.arch.bot.model.RecordId;
-import org.bf2.arch.bot.model.RecordType;
+import org.bf2.arch.bot.model.record.RecordPage;
+import org.bf2.arch.bot.model.record.RecordId;
+import org.bf2.arch.bot.model.record.RecordType;
 import org.junit.jupiter.api.Test;
 import org.kohsuke.github.GHBranch;
 import org.kohsuke.github.GHCommit;
@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-class CreateDraftRecordTest {
+class CreateDraftRecordFlowTest {
 
     public static final String EXAMPLE_TEMPLATE = "---\n" +
             "num: 0 # allocate an id when the draft is created\n" +
@@ -54,9 +54,9 @@ class CreateDraftRecordTest {
 
     @Test
     public void renderTemplateTest() throws IOException {
-        Page example = Page.fromContent(
+        RecordPage example = RecordPage.fromContent(
                 EXAMPLE_TEMPLATE);
-        var rendered = CreateDraftRecord.renderTemplate(new RecordId(RecordType.ADR, 12),
+        var rendered = CreateDraftFlow.renderTemplate(new RecordId(RecordType.ADR, 12),
                 "Foo",
                 List.of("me"),
                 List.of("bar"),
@@ -77,9 +77,9 @@ class CreateDraftRecordTest {
 
     @Test
     public void renderSupersededTemplateTest() throws IOException {
-        Page example = Page.fromContent(
+        RecordPage example = RecordPage.fromContent(
                 EXAMPLE_TEMPLATE);
-        var rendered = CreateDraftRecord.renderTemplate(new RecordId(RecordType.ADR, 12),
+        var rendered = CreateDraftFlow.renderTemplate(new RecordId(RecordType.ADR, 12),
                 "Foo",
                 List.of("me"),
                 List.of("bar"),
@@ -113,13 +113,13 @@ class CreateDraftRecordTest {
 
         when(repo.getCommit(commitSha)).thenReturn(commit);
         when(commit.getTree()).thenReturn(tree);
-        when(tree.getEntry(RecordType.ADR.dir)).thenReturn(entry);
+        when(tree.getEntry(RecordType.ADR.repoDir)).thenReturn(entry);
         when(entry.asTree()).thenReturn(tree2);
         when(tree2.getTree()).thenReturn(List.of(adr3, adr12));
         when(adr3.getPath()).thenReturn("3");
         when(adr12.getPath()).thenReturn("12");
 
-        assertEquals(13, new CreateDraftRecord().allocateId(repo, commitSha, RecordType.ADR));
+        assertEquals(13, new CreateDraftFlow().allocateId(repo, commitSha, RecordType.ADR));
     }
 
     @Test
@@ -132,7 +132,7 @@ class CreateDraftRecordTest {
         when(content.read()).thenAnswer(i -> new ByteArrayInputStream(EXAMPLE_TEMPLATE.getBytes(StandardCharsets.UTF_8)));
         when(branch.getSHA1()).thenReturn("123a");
 
-        var page = CreateDraftRecord.getPage(repo, branch, "_adr/0/index.adoc");
+        var page = CreateDraftFlow.getPage(repo, branch, "_adr/0/index.adoc");
 
         assertEquals(0, page.frontMatter.num);
         assertTrue(page.bodyContent.contains("Hello, world"));

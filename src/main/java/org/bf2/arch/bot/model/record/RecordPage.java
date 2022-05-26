@@ -14,29 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bf2.arch.bot.model;
+package org.bf2.arch.bot.model.record;
 
 import java.io.IOException;
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 
-public class Page {
+/**
+ * Represents a record, consisting of some {@linkplain RecordFrontMatter front matter} and some (asciidoc) content.
+ */
+public class RecordPage {
     private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
 
-    public final FrontMatter frontMatter;
+    public final RecordFrontMatter frontMatter;
     public final String bodyContent;
 
-    public Page(FrontMatter frontMatter, String bodyContent) {
-        this.frontMatter = frontMatter;
+    public RecordPage(RecordFrontMatter recordFrontMatter, String bodyContent) {
+        this.frontMatter = recordFrontMatter;
         this.bodyContent = bodyContent;
     }
 
-    public static Page fromContent(String content) throws IOException {
+    public static RecordPage fromContent(String content) throws IOException {
         String[] parts = content.split("---+", 3);
         String frontmatter = parts[1];
         String bodyContent = parts[2];
-        var fm = YAML_MAPPER.readValue(frontmatter, FrontMatter.class);
-        return new Page(fm, bodyContent);
+        var fm = YAML_MAPPER.readValue(frontmatter, RecordFrontMatter.class);
+        return new RecordPage(fm, bodyContent);
     }
 
     public String toContentString() throws IOException {

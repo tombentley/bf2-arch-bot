@@ -14,10 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bf2.arch.bot.model;
+package org.bf2.arch.bot.model.record;
 
 import java.util.Objects;
 
+/**
+ * The id for a record, consistenting of a {@linkplain RecordType record type} and an id number.
+ */
 public class RecordId {
     private final RecordType recordType;
     private final int num;
@@ -39,8 +42,8 @@ public class RecordId {
         return recordType.path(num);
     }
 
-    public String publishedUrl() {
-        return String.format("https://architecture.appservices.tech/adr/%d/", num);
+    public String publishedUrl(String baseUrl) {
+        return String.format("%s/%s/%d/", baseUrl, recordType.publishedPath, num);
     }
 
     public String toString() {

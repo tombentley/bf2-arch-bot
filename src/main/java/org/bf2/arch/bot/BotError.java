@@ -16,9 +16,9 @@
  */
 package org.bf2.arch.bot;
 
-public class BotBusinessError extends RuntimeException {
+public class BotError extends RuntimeException {
 
-    public BotBusinessError(String message) {
+    public BotError(String message) {
         super(message);
     }
 }

@@ -16,36 +16,68 @@
  */
 package org.bf2.arch.bot.model.patch;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-
 
 /**
  * A hunk of a patch
  */
 public class Hunk {
 
-    final int oldStartLine;
-    final int oldLength;
-    final int newStartLine;
-    final int newLength;
-    final List<Line> changes;
+    private final int hunkStartLine;
+    private final int oldStartLine;
+    private final int oldLength;
+    private final int newStartLine;
+    private final int newLength;
+    private final List<Line> lines;
 
-    public Hunk(int oldStartLine, int oldLength, int newStartLine, int newLength, List<Line> changes) {
+    public Hunk(int hunkStartLine,
+                int oldStartLine,
+                int oldLength,
+                int newStartLine,
+                int newLength,
+                List<Line> lines) {
+        this.hunkStartLine = hunkStartLine;
         this.oldStartLine = oldStartLine;
         this.oldLength = oldLength;
         this.newStartLine = newStartLine;
         this.newLength = newLength;
-        this.changes = changes;
+        this.lines = lines;
     }
 
     @Override
     public String toString() {
-        return String.format("@@ -%d,%d +%d,%d @@", oldLength, oldLength, newStartLine, newLength);
+        return String.format("@@ -%d,%d +%d,%d @@",
+                oldLength(),
+                oldLength(),
+                newStartLine(),
+                newLength());
     }
 
+    /**
+     * @return the line of the patch that this hunk appears on.
+     */
+    public int hunkStartLine() {
+        return hunkStartLine;
+    }
 
+    public int oldStartLine() {
+        return oldStartLine;
+    }
+
+    public int oldLength() {
+        return oldLength;
+    }
+
+    public int newStartLine() {
+        return newStartLine;
+    }
+
+    public int newLength() {
+        return newLength;
+    }
+
+    /** The lines in the patch */
+    public List<Line> lines() {
+        return lines;
+    }
 }

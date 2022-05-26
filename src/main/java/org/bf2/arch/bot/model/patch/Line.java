@@ -21,10 +21,15 @@ package org.bf2.arch.bot.model.patch;
  */
 public class Line {
 
-    enum Type {
-        CONTEXT,
-        ADD,
-        REMOVE
+    public enum Type {
+        CONTEXT(' '),
+        ADD('+'),
+        REMOVE('-');
+        private final char prefix;
+
+        private Type(char prefix) {
+            this.prefix = prefix;
+        }
     }
 
     private final Type type;
@@ -41,5 +46,10 @@ public class Line {
 
     public String line() {
         return line;
+    }
+
+    @Override
+    public String toString() {
+        return type.prefix + line;
     }
 }
