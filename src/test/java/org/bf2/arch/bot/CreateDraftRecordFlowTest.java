@@ -92,7 +92,6 @@ class CreateDraftRecordFlowTest {
                         "- \"me\"\n" +
                         "tags:\n" +
                         "- \"bar\"\n" +
-                        "superseded_by: 12\n" +
                         "---\n" +
                         "Hello, world\n", rendered.toContentString());
     }

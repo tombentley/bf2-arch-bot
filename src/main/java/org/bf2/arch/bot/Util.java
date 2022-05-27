@@ -37,6 +37,8 @@ public class Util {
 
     private static final Logger LOG = LoggerFactory.getLogger(Util.class);
 
+    public static final String CONFIG_REPO_PATH = "bf2-arch-bot.yml";
+
     private Util() { }
 
     static boolean isThisBot(ArchBotConfig config, GHUser user) throws IOException {

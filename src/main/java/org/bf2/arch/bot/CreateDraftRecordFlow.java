@@ -79,7 +79,7 @@ public class CreateDraftRecordFlow {
             @IssueComment.Created
             @IssueComment.Edited
             GHEventPayload.IssueComment commentPayload,
-            @ConfigFile("bf2-arch-bot.yml") ArchBotConfig config) throws IOException {
+            @ConfigFile(Util.CONFIG_REPO_PATH) ArchBotConfig config) throws IOException {
         if (!enabled) {
             LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
             return;

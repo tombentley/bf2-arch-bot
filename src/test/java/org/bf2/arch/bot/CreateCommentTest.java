@@ -17,20 +17,52 @@
 package org.bf2.arch.bot;
 
 import java.io.IOException;
+import java.util.List;
 
 import io.quarkiverse.githubapp.testing.GitHubAppTest;
 import io.quarkiverse.githubapp.testing.GitHubAppTesting;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
+import org.kohsuke.github.GHBranch;
+import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHEvent;
+import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.GHTree;
+import org.kohsuke.github.GHTreeEntry;
 import org.mockito.Mockito;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 @GitHubAppTest
 class CreateCommentTest {
     @Test
     void testIssueOpened() throws IOException {
-        GitHubAppTesting.when()
+        GitHubAppTesting.given().github(mocks -> {
+                    mocks.configFileFromClasspath(Util.CONFIG_REPO_PATH, "/config.yaml");
+                    GHRepository repository = mocks.repository("app-services-architecture");
+                    when(repository.getDefaultBranch()).thenReturn("main");
+                    var defaultBranch = mock(GHBranch.class);
+                    when(defaultBranch.getName()).thenReturn("main");
+                    when(defaultBranch.getSHA1()).thenReturn("1234");
+
+                    var entries = List.of(mock(GHTreeEntry.class));
+
+                    var tree2 = mock(GHTree.class);
+                    when(tree2.getTree()).thenReturn(entries);
+
+                    var entry = mock(GHTreeEntry.class);
+                    when(entry.asTree()).thenReturn(tree2);
+
+                    var tree = mock(GHTree.class);
+                    when(tree.getEntry("_adr")).thenReturn(entry);
+
+                    var commit = mock(GHCommit.class);
+                    when(commit.getTree()).thenReturn(tree);
+                    when(repository.getBranch("main")).thenReturn(defaultBranch);
+                    when(repository.getCommit("1234")).thenReturn(commit);
+        }).when()
                 .payloadFromClasspath("/1-user-comment-issue.json")
                 .event(GHEvent.ISSUE_COMMENT)
                 .then().github(mocks -> {

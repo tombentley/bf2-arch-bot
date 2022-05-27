@@ -70,7 +70,7 @@ public class ArchReviewStateMachineFlow {
             @PullRequest.ReadyForReview
             @PullRequest.Edited
             GHEventPayload.PullRequest pullRequestPayload,
-            @ConfigFile("bf2-arch-bot.yml") ArchBotConfig config) throws IOException {
+            @ConfigFile(Util.CONFIG_REPO_PATH) ArchBotConfig config) throws IOException {
         if (!enabled) {
             LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
             return;
@@ -161,7 +161,7 @@ public class ArchReviewStateMachineFlow {
      */
     public void readyForMerge(@IssueComment.Created
                               GHEventPayload.IssueComment payload,
-                              @ConfigFile("bf2-arch-bot.yml") ArchBotConfig config) throws IOException, URISyntaxException {
+                              @ConfigFile(Util.CONFIG_REPO_PATH) ArchBotConfig config) throws IOException, URISyntaxException {
         if (!enabled) {
             LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
             return;
