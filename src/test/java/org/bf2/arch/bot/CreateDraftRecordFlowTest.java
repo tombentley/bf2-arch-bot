@@ -60,7 +60,6 @@ class CreateDraftRecordFlowTest {
                 "Foo",
                 List.of("me"),
                 List.of("bar"),
-                -1,
                 example);
         assertEquals(
                 "---\n" +
@@ -83,7 +82,6 @@ class CreateDraftRecordFlowTest {
                 "Foo",
                 List.of("me"),
                 List.of("bar"),
-                12,
                 example);
         assertEquals(
                 "---\n" +
