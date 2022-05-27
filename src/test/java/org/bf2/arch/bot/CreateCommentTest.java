@@ -22,6 +22,7 @@ import java.util.List;
 import io.quarkiverse.githubapp.testing.GitHubAppTest;
 import io.quarkiverse.githubapp.testing.GitHubAppTesting;
 import io.quarkus.test.junit.QuarkusTest;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.kohsuke.github.GHBranch;
 import org.kohsuke.github.GHCommit;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.when;
 @GitHubAppTest
 class CreateCommentTest {
     @Test
+    @Disabled
     void testIssueOpened() throws IOException {
         GitHubAppTesting.given().github(mocks -> {
                     mocks.configFileFromClasspath(Util.CONFIG_REPO_PATH, "/config.yaml");
