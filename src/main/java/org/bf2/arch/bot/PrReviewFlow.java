@@ -188,11 +188,11 @@ public class PrReviewFlow {
                     // and particularly the FrontMatter and see how the FrontMatter change?
                     GHRepository ourRepo = pullRequest.getBase().getRepository();
                     String defaultBranch = ourRepo.getDefaultBranch();
-                    var basePage = CreateDraftFlow.getPage(ourRepo, ourRepo.getBranch(defaultBranch), repoPath);
+                    var basePage = CreateDraftRecordFlow.getPage(ourRepo, ourRepo.getBranch(defaultBranch), repoPath);
 
                     GHCommitPointer head = pullRequest.getHead();
                     var theirRepo = head.getRepository();
-                    var headPage = CreateDraftFlow.getPage(ourRepo, theirRepo.getBranch(head.getRef()), repoPath);
+                    var headPage = CreateDraftRecordFlow.getPage(ourRepo, theirRepo.getBranch(head.getRef()), repoPath);
 
                     GHPullRequestReviewBuilder review = pullRequest.createReview();
                     FilePatch filePatch = FilePatch.parsePatch(fileDetail.getPatch());

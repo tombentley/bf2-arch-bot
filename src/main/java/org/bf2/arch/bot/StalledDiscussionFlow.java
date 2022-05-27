@@ -25,6 +25,7 @@ import java.util.Set;
 
 import io.quarkiverse.githubapp.runtime.github.GitHubService;
 import io.quarkus.scheduler.Scheduled;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.kohsuke.github.GHDirection;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueSearchBuilder;
@@ -43,9 +44,9 @@ public class StalledDiscussionFlow {
     //ArchBotConfig config;
 
     @Inject
-    void init(GitHubService service) {
-        // TODO parameterise this installactionId
-         client = service.getInstallationClient(Long.valueOf(System.getenv("INSTALLATION_ID")));
+    void init(GitHubService service,
+              @ConfigProperty("") Long installationId) {
+         client = service.getInstallationClient(installationId);
          // TODO load the config
     }
 

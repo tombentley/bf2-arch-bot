@@ -56,7 +56,7 @@ class CreateDraftRecordFlowTest {
     public void renderTemplateTest() throws IOException {
         RecordPage example = RecordPage.fromContent(
                 EXAMPLE_TEMPLATE);
-        var rendered = CreateDraftFlow.renderTemplate(new RecordId(RecordType.ADR, 12),
+        var rendered = CreateDraftRecordFlow.renderTemplate(new RecordId(RecordType.ADR, 12),
                 "Foo",
                 List.of("me"),
                 List.of("bar"),
@@ -79,7 +79,7 @@ class CreateDraftRecordFlowTest {
     public void renderSupersededTemplateTest() throws IOException {
         RecordPage example = RecordPage.fromContent(
                 EXAMPLE_TEMPLATE);
-        var rendered = CreateDraftFlow.renderTemplate(new RecordId(RecordType.ADR, 12),
+        var rendered = CreateDraftRecordFlow.renderTemplate(new RecordId(RecordType.ADR, 12),
                 "Foo",
                 List.of("me"),
                 List.of("bar"),
@@ -119,7 +119,7 @@ class CreateDraftRecordFlowTest {
         when(adr3.getPath()).thenReturn("3");
         when(adr12.getPath()).thenReturn("12");
 
-        assertEquals(13, new CreateDraftFlow().allocateId(repo, commitSha, RecordType.ADR));
+        assertEquals(13, new CreateDraftRecordFlow().allocateId(repo, commitSha, RecordType.ADR));
     }
 
     @Test
@@ -132,7 +132,7 @@ class CreateDraftRecordFlowTest {
         when(content.read()).thenAnswer(i -> new ByteArrayInputStream(EXAMPLE_TEMPLATE.getBytes(StandardCharsets.UTF_8)));
         when(branch.getSHA1()).thenReturn("123a");
 
-        var page = CreateDraftFlow.getPage(repo, branch, "_adr/0/index.adoc");
+        var page = CreateDraftRecordFlow.getPage(repo, branch, "_adr/0/index.adoc");
 
         assertEquals(0, page.frontMatter.num);
         assertTrue(page.bodyContent.contains("Hello, world"));

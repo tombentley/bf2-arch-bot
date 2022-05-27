@@ -1,6 +1,7 @@
 package org.bf2.arch.bot;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.List;
@@ -53,12 +54,12 @@ import org.slf4j.LoggerFactory;
  * Post condition: An ADR in the draft state exists.
  * The user can then edit that ADR in their own branch.
  */
-public class CreateDraftFlow {
+public class CreateDraftRecordFlow {
 
     public static final Pattern CMD_CREATE = Pattern.compile("/create +(?<recordType>p?adr|ap)", Pattern.CASE_INSENSITIVE);
     public static final Pattern CMD_SUPERSEDE = Pattern.compile("/supersede +(?<recordType>p?adr|ap) +(?<num>[0-9]+)", Pattern.CASE_INSENSITIVE);
 
-    private static final Logger LOG = LoggerFactory.getLogger(CreateDraftFlow.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CreateDraftRecordFlow.class);
 
     /**
      * Creates a PR for a Draft ADR when an issue comment has {@code /create-adr} (or ap, or padr),
@@ -126,8 +127,7 @@ public class CreateDraftFlow {
                     draftRecord,
                     issue.getTitle(),
                     recordAuthors(issue).collect(Collectors.toList()),
-                    recordTags(issue),
-                    -1);
+                    recordTags(issue));
             tree.add(draftRecord.repoPath(), draftRecordContent.toContentString(), false);
 
             // update the supersede record
@@ -238,21 +238,21 @@ public class CreateDraftFlow {
                                     RecordId record,
                                     String title,
                                     List<String> authors,
-                                    List<String> tags,
-                                    int superseded) throws IOException {
+                                    List<String> tags) throws IOException {
         var templateRepoPath = record.recordType().path(0);
         return renderTemplate(record,
                 title,
                 authors,
                 tags,
-                superseded,
                 getPage(repo, defaultBranch, templateRepoPath));
     }
 
     @Nullable
     static RecordPage getPage(GHRepository repo, GHBranch defaultBranch, String repoPath) throws IOException {
         String content = getContent(repo, defaultBranch, repoPath);
-        if (content == null) return null;
+        if (content == null) {
+            return null;
+        }
         return RecordPage.fromContent(content);
     }
 
@@ -262,7 +262,9 @@ public class CreateDraftFlow {
         if (fileContent == null) {
             return null;
         }
-        return new String(fileContent.read().readAllBytes(), StandardCharsets.UTF_8);
+        try (InputStream read = fileContent.read()) {
+            return new String(read.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 
     @NotNull
@@ -270,16 +272,12 @@ public class CreateDraftFlow {
                                      String title,
                                      List<String> authors,
                                      List<String> tags,
-                                     int supersededBy,
                                      RecordPage recordPage) {
         recordPage.frontMatter.num = record.num();
         recordPage.frontMatter.title = title;
         recordPage.frontMatter.status = "Draft";
         recordPage.frontMatter.authors = authors;
         recordPage.frontMatter.tags = tags;
-        if (supersededBy > 0) {
-            recordPage.frontMatter.supersededBy = supersededBy;
-        }
         return recordPage;
     }
 

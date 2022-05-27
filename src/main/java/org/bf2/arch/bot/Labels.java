@@ -23,7 +23,7 @@ import java.util.Set;
  */
 public class Labels {
     /**
-     * The tag prefix is used by {@link CreateDraftFlow} to create Draft records
+     * The tag prefix is used by {@link CreateDraftRecordFlow} to create Draft records
      * with frontmatter tags matching the {@code tag:} labels on the issue.
      */
     public static final String PREFIX_TAG = "tag: ";
