@@ -128,7 +128,7 @@ public class ArchReviewStateMachineFlow {
      * @param pullRequest The pull request
      * @return true iff a record file is touched by the commits in the PR.
      */
-    private EnumSet<RecordType> touchesRecord(GHPullRequest pullRequest) {
+    EnumSet<RecordType> touchesRecord(GHPullRequest pullRequest) {
         EnumSet<RecordType> touchesRecord = EnumSet.noneOf(RecordType.class);
         var prNumber = pullRequest.getNumber();
         for (var fileDetail : pullRequest.listFiles()) {
@@ -160,21 +160,21 @@ public class ArchReviewStateMachineFlow {
      * 2. Remove "type: being-reviewed" and add "type: ready-for-merge"
      */
     public void readyForMerge(@IssueComment.Created
-                              GHEventPayload.IssueComment issueComment,
+                              GHEventPayload.IssueComment payload,
                               @ConfigFile("bf2-arch-bot.yml") ArchBotConfig config) throws IOException, URISyntaxException {
         if (!enabled) {
             LOG.debug("Ignoring event: disabled due to {}=false", ENABLE);
             return;
         }
-        if (!issueComment.getIssue().isPullRequest()) {
-            LOG.debug("Ignoring non-PR issue #{}", issueComment.getIssue().getNumber());
+        GHIssue issue = payload.getIssue();
+        if (!issue.isPullRequest()) {
+            LOG.debug("Ignoring non-PR issue #{}", issue.getNumber());
             return;
         }
-        if (Util.isThisBot(config, issueComment.getComment().getUser())) {
-            LOG.debug("PR#{}: Ignoring my own comment", issueComment.getIssue().getNumber());
+        if (Util.isThisBot(config, payload.getComment().getUser())) {
+            LOG.debug("PR#{}: Ignoring my own comment", issue.getNumber());
             return;
         }
-        GHIssue issue = issueComment.getIssue();
         GHPullRequest pullRequest = Util.findPullRequest(issue);
         if (pullRequest == null) {
             return;
@@ -183,7 +183,7 @@ public class ArchReviewStateMachineFlow {
         Set<String> reviewers = pullRequest.getRequestedReviewers().stream().map(GHPerson::getLogin).collect(Collectors.toSet());
 
         if (reviewers.isEmpty()) {
-            LOG.debug("PR#{}: Ignoring because it has no reviewers", issueComment.getIssue().getNumber());
+            LOG.debug("PR#{}: Ignoring because it has no reviewers", issue.getNumber());
             return;
         }
 
@@ -194,15 +194,15 @@ public class ArchReviewStateMachineFlow {
                 // TODO might want to check for these as words, not merely contains
                 if (comment.getBody().contains("/accept")) {
                     LOG.debug("PR#{}: {} accepts the changes",
-                            issueComment.getIssue().getNumber(),reviewer);
+                            issue.getNumber(),reviewer);
                     outcomes.put(reviewer, ReviewerDisposition.ACCEPT);
                 } else if(comment.getBody().contains("/defer")) {
                     LOG.debug("PR#{}: {} defers the changes",
-                            issueComment.getIssue().getNumber(), reviewer);
+                            issue.getNumber(), reviewer);
                     outcomes.put(reviewer, ReviewerDisposition.DEFER);
                 } else if (comment.getBody().contains("/reject")) {
                     LOG.debug("PR#{}: {} rejects the changes",
-                            issueComment.getIssue().getNumber(), reviewer);
+                            issue.getNumber(), reviewer);
                     outcomes.put(reviewer, ReviewerDisposition.REJECT);
                 }
             }
@@ -210,12 +210,12 @@ public class ArchReviewStateMachineFlow {
         if (outcomes.keySet().equals(reviewers)) {
             // All reviewers have expressed a conclusion
             LOG.debug("PR#{}: All reviewers have now expressed their opinion",
-                    issueComment.getIssue().getNumber());
+                    issue.getNumber());
             Set<String> labels = Util.existingLabels(pullRequest);
             if (new HashSet<>(outcomes.values()).size() == 1) {
                 // And they've all reached the same conclusion
                 LOG.debug("PR#{}: All reviewers have now the same opinion",
-                        issueComment.getIssue().getNumber());
+                        issue.getNumber());
                 // Remove notice (if it's present)
                 labels.remove(Labels.NOTICE_SPLIT_REVIEW);
                 // Change state
@@ -224,7 +224,7 @@ public class ArchReviewStateMachineFlow {
 
             } else {
                 LOG.debug("PR#{}: Reviewers have differing opinions",
-                        issueComment.getIssue().getNumber());
+                        issue.getNumber());
                 Map<ReviewerDisposition, Set<String>> inverted = new LinkedHashMap<>();
                 for (Map.Entry<String, ReviewerDisposition> entry : outcomes.entrySet()) {
                     inverted.computeIfAbsent(entry.getValue(), k -> new TreeSet<>()).add(entry.getKey());
@@ -245,11 +245,8 @@ public class ArchReviewStateMachineFlow {
             Util.setLabels(pullRequest, labels);
         } else {
             LOG.debug("PR#{}: Not all reviewers have expressed their opinion",
-                    issueComment.getIssue().getNumber());
+                    issue.getNumber());
         }
 
     }
-
-
-
 }
