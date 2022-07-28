@@ -1,0 +1,14 @@
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  name: openjdk-11
+  labels:
+    app.kubernetes.io/name: bf2-arch-bot
+spec:
+  tags:
+  - from:
+      kind: DockerImage
+      name: registry.access.redhat.com/ubi8/openjdk-11:1.13
+    importPolicy:
+      scheduled: true
+    name: "1.13"

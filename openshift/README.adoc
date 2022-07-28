@@ -1,0 +1,89 @@
+= OpenShift
+
+This directory contains resources that can be applied to an OpenShift
+cluster with the intention of supporting a basic continuous delivery
+flow in which an update to the main branch of the Git repository
+causes a new build and new deployment of the application.
+
+The details of the steps involved are as follows:
+
+- One of the following build triggers will cause a new build to occur
+  (configured in `spec.triggers` in
+  link:buildconfig.yaml[BuildConfig]):
+  - GitHub will notify when there is new code pushed to the main
+    branch via webhook
+  - The relevant tag of the openjdk-11 base image used for the build
+    will be checked periodically, and if there's a change then the
+    BuildConfig will be notified in the BuildConfig, then a new build
+    is triggered.
+- Once the build is complete, a new image will be pushed to the
+  configured image stream tag in the internal container image registry
+  in the cluster.
+- The image stream tag update triggers a redeployment of the running
+  application
+
+== Setup
+
+=== Prerequisites
+
+=== Secret to provide environment variables to application Pod
+
+The link:deployment.yaml[Deployment] expects there to be a Secret on
+the cluster called `bf2-arch-bot` which contains a list of `key:
+value` pairs, corresponding to the `.env` file in the root of this
+repo. These will be exported as environment variables to the
+application in the container on start up.
+
+Given that the `QUARKUS_GITHUB_APP_PRIVATE_KEY` env var typically has
+a multi-line value, it might be easier to create this Secret through
+the OpenShift web console, as the following command doesn't seem to be
+able to handle the multi-line value very well:
+
+[source,sh]
+----
+oc create secret generic my-secret --from-env-file=path/to/bar.env
+----
+
+[NOTE]
+====
+The `QUARKUS_GITHUB_APP_WEBHOOK_PROXY_URL` variable doesn't (and maybe
+shouldn't?) be specified in an environment where the application via
+the Route on the public internet. If setting up for a local
+development environment, it's useful to set this as outlined in the
+Quarkus guide.
+====
+
+==== Secret to provide WebHookSecret value to BuildConfig trigger
+
+This additional Secret, called `bf2-arch-bot-gh-webhook-secret` is
+expected to exist in the namespace so that the GitHub webook
+configuration in BuildConfig can use it to configure the webhook. More
+details of this can be found
+link:https://docs.openshift.com/container-platform/4.10/cicd/builds/triggering-builds-build-hooks.html#builds-webhook-triggers_triggering-builds-build-hooks[here].
+
+[NOTE]
+====
+The value of the `WebHookSecretKey` key in this Secret will also be
+part of the URL for the webook that GitHub will call, so it should be
+a valid string that can be used for that. One common gotcha is to have
+a value that has newline character at the end, and then wondering why
+the webhook isn't working from the GitHub side.
+====
+
+=== Applying application resources to the cluster
+
+All of the YAML files in this directory contain Kubernetes resources
+that can be idempotently created on the cluster with `oc apply`. The
+following seems like a reasonable way to apply all of those at once:
+
+[source,sh]
+----
+find -name '*.yaml' -exec echo oc apply -f {} \;
+----
+
+Alternatively, from outside this folder, the following also works:
+
+[source,sh]
+----
+oc apply -f ./openshift/
+----
