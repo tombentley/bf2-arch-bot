@@ -1,0 +1,9 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app.kubernetes.io/name: bf2-arch-bot
+  name: bf2-arch-bot
+spec:
+  lookupPolicy:
+    local: false

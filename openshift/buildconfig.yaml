@@ -1,0 +1,32 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: bf2-arch-bot
+  name: bf2-arch-bot
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: bf2-arch-bot:1.0.0-SNAPSHOT
+  runPolicy: Serial
+  source:
+    git:
+      uri: "https://github.com/tombentley/bf2-arch-bot"
+      ref: "main"
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: openjdk-11:1.13
+    type: Source
+  triggers:
+    - type: GitHub
+      github:
+        secretReference:
+          name: bf2-arch-bot-gh-webhook-secret
+    - type: ImageChange
+      imageChange:
+      from:
+        kind: ImageStreamTag
+        name: openjdk-11:1.13
